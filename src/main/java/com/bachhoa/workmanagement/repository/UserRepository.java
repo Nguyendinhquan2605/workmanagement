@@ -1,6 +1,8 @@
 package com.bachhoa.workmanagement.repository;
 
 import com.bachhoa.workmanagement.entity.User;
+import com.bachhoa.workmanagement.entity.enums.UserStatus;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -14,4 +16,13 @@ public interface UserRepository extends JpaRepository<User, UUID> {
 	Optional<User> findByUsername(String username);
 
 	boolean existsByUsername(String username);
+
+	boolean existsByUsernameAndIdNot(String username, UUID id);
+
+	@Query("select u from User u join fetch u.role "
+			+ "where u.status = :status and u.role.code = :roleCode "
+			+ "order by u.fullName asc")
+	List<User> findAssignableUsers(
+			@Param("status") UserStatus status,
+			@Param("roleCode") String roleCode);
 }
