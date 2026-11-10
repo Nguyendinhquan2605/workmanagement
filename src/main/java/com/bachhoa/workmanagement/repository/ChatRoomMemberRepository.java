@@ -12,4 +12,14 @@ public interface ChatRoomMemberRepository extends JpaRepository<ChatRoomMember, 
 	boolean existsByRoom_IdAndUser_Id(UUID roomId, UUID userId);
 
 	List<ChatRoomMember> findByRoom_Id(UUID roomId);
+
+	List<ChatRoomMember> findByRoom_IdOrderByJoinedAtAsc(UUID roomId);
+
+	List<ChatRoomMember> findByUser_Id(UUID userId);
+
+	long countByRoom_Id(UUID roomId);
+
+	void deleteByRoom_Id(UUID roomId);
+
+	void deleteByRoom_IdAndUser_Id(UUID roomId, UUID userId);
 }
