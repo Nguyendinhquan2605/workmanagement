@@ -6,6 +6,7 @@ import com.bachhoa.workmanagement.task.dto.AssignTaskRequest;
 import com.bachhoa.workmanagement.task.dto.ChangeTaskStatusRequest;
 import com.bachhoa.workmanagement.task.dto.CreateTaskRequest;
 import com.bachhoa.workmanagement.task.dto.TaskResponse;
+import com.bachhoa.workmanagement.task.dto.TaskHistoryResponse;
 import com.bachhoa.workmanagement.task.dto.UpdateTaskRequest;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
@@ -90,6 +91,15 @@ public class TaskController {
     @Operation(summary = "Xem công việc do người dùng hiện tại tạo")
     public List<TaskResponse> getCreatedByMe(Authentication authentication) {
         return taskService.getCreatedByMe(authentication);
+    }
+
+    @GetMapping("/{id}/history")
+    @PreAuthorize("isAuthenticated()")
+    @Operation(summary = "Xem lịch sử thay đổi trạng thái công việc")
+    public List<TaskHistoryResponse> getHistory(
+            @PathVariable UUID id,
+            Authentication authentication) {
+        return taskService.getHistory(id, authentication);
     }
 
     @GetMapping("/{id}")

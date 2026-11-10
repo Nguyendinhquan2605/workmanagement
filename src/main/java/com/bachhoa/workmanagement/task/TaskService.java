@@ -1,6 +1,7 @@
 package com.bachhoa.workmanagement.task;
 
 import com.bachhoa.workmanagement.common.exception.BadRequestException;
+import com.bachhoa.workmanagement.common.exception.ConflictException;
 import com.bachhoa.workmanagement.common.exception.ResourceNotFoundException;
 import com.bachhoa.workmanagement.entity.Task;
 import com.bachhoa.workmanagement.entity.TaskHistory;
@@ -15,6 +16,7 @@ import com.bachhoa.workmanagement.task.dto.AssignTaskRequest;
 import com.bachhoa.workmanagement.task.dto.ChangeTaskStatusRequest;
 import com.bachhoa.workmanagement.task.dto.CreateTaskRequest;
 import com.bachhoa.workmanagement.task.dto.TaskResponse;
+import com.bachhoa.workmanagement.task.dto.TaskHistoryResponse;
 import com.bachhoa.workmanagement.task.dto.UpdateTaskRequest;
 import java.time.LocalDate;
 import java.util.List;
@@ -75,6 +77,20 @@ public class TaskService {
         Task task = findTask(id);
         assertCanView(task, actor);
         return toResponse(task);
+    }
+
+    @Transactional(readOnly = true)
+    public List<TaskHistoryResponse> getHistory(
+            UUID taskId,
+            Authentication authentication) {
+        User actor = currentUser(authentication);
+        Task task = findTask(taskId);
+        assertCanView(task, actor);
+
+        return taskHistoryRepository.findByTask_IdOrderByChangedAtDesc(taskId)
+                .stream()
+                .map(this::toHistoryResponse)
+                .toList();
     }
 
     @Transactional
@@ -259,15 +275,15 @@ public class TaskService {
             TaskStatus newStatus,
             User actor) {
         if (oldStatus == newStatus) {
-            throw new BadRequestException("Trạng thái mới phải khác trạng thái hiện tại");
+            throw new ConflictException("Trạng thái mới phải khác trạng thái hiện tại");
         }
 
         if (oldStatus == TaskStatus.CANCELLED) {
-            throw new BadRequestException("CANCELLED là trạng thái kết thúc");
+            throw new ConflictException("CANCELLED là trạng thái kết thúc");
         }
 
         if (oldStatus == TaskStatus.TODO && newStatus == TaskStatus.COMPLETED) {
-            throw new BadRequestException(
+            throw new ConflictException(
                     "Không được chuyển trực tiếp từ TODO sang COMPLETED");
         }
 
@@ -308,6 +324,18 @@ public class TaskService {
                 assignedTo == null ? null : assignedTo.getUsername(),
                 task.getCreatedAt(),
                 task.getUpdatedAt());
+    }
+
+    private TaskHistoryResponse toHistoryResponse(TaskHistory history) {
+        User changedBy = history.getChangedBy();
+        return new TaskHistoryResponse(
+                history.getId(),
+                history.getTask().getId(),
+                history.getOldStatus(),
+                history.getNewStatus(),
+                changedBy.getId(),
+                changedBy.getUsername(),
+                history.getChangedAt());
     }
 
     private boolean isAdmin(User user) {

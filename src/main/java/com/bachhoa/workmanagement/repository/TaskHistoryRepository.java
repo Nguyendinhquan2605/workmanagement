@@ -6,5 +6,5 @@ import java.util.UUID;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 public interface TaskHistoryRepository extends JpaRepository<TaskHistory, UUID> {
-	List<TaskHistory> findByTask_IdOrderByChangedAtAsc(UUID taskId);
+	List<TaskHistory> findByTask_IdOrderByChangedAtDesc(UUID taskId);
 }

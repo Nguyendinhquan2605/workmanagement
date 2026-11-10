@@ -479,11 +479,11 @@
       }
     },
     {
-        "name": "21 - MEMBER direct TODO to COMPLETED - 400",
+        "name": "21 - MEMBER direct TODO to COMPLETED - 409",
       "event": [{
         "listen": "test",
         "script": {
-          "exec": ["pm.test('Status 400', () => pm.response.to.have.status(400));"],
+          "exec": ["pm.test('Status 409', () => pm.response.to.have.status(409));"],
           "type": "text/javascript"
         }
       }],

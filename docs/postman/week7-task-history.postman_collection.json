@@ -1,0 +1,317 @@
+{
+  "info": {
+    "name": "Workmanagement - Week 7 Task History",
+    "description": "Kiểm thử 14 test case tuần 7 cho ghi nhận và truy vấn lịch sử thay đổi trạng thái Task.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "baseUrl", "value": "http://localhost:8080" },
+    { "key": "runSuffix", "value": "" },
+    { "key": "adminToken", "value": "" },
+    { "key": "managerToken", "value": "" },
+    { "key": "manager2Token", "value": "" },
+    { "key": "memberToken", "value": "" },
+    { "key": "managerUsername", "value": "" },
+    { "key": "manager2Username", "value": "" },
+    { "key": "memberUsername", "value": "" },
+    { "key": "member2Username", "value": "" },
+    { "key": "memberId", "value": "" },
+    { "key": "member2Id", "value": "" },
+    { "key": "taskHistoryId", "value": "" },
+    { "key": "taskNoHistoryId", "value": "" },
+    { "key": "taskConflictId", "value": "" },
+    { "key": "taskOtherManagerId", "value": "" }
+  ],
+  "item": [
+    {
+      "name": "SETUP 01 - Login ADMIN",
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "const suffix = Date.now().toString();",
+              "pm.collectionVariables.set('runSuffix', suffix);",
+              "pm.collectionVariables.set('managerUsername', `manager_w7_${suffix}`);",
+              "pm.collectionVariables.set('manager2Username', `manager2_w7_${suffix}`);",
+              "pm.collectionVariables.set('memberUsername', `member_w7_${suffix}`);",
+              "pm.collectionVariables.set('member2Username', `member2_w7_${suffix}`);"
+            ]
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Status 200', () => pm.response.to.have.status(200));",
+              "pm.collectionVariables.set('adminToken', pm.response.json().accessToken);"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": { "mode": "raw", "raw": "{\n  \"username\": \"admin\",\n  \"password\": \"admin123\"\n}", "options": { "raw": { "language": "json" } } },
+        "url": { "raw": "{{baseUrl}}/api/auth/login", "host": ["{{baseUrl}}"], "path": ["api", "auth", "login"] }
+      }
+    },
+    {
+      "name": "SETUP 02 - Create MANAGER 1",
+      "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('Status 201', () => pm.response.to.have.status(201));"] } }],
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{adminToken}}", "type": "string" }] },
+        "body": { "mode": "raw", "raw": "{\n  \"username\": \"{{managerUsername}}\",\n  \"password\": \"manager123\",\n  \"fullName\": \"Manager Week 7\",\n  \"roleCode\": \"MANAGER\"\n}", "options": { "raw": { "language": "json" } } },
+        "url": { "raw": "{{baseUrl}}/api/users", "host": ["{{baseUrl}}"], "path": ["api", "users"] }
+      }
+    },
+    {
+      "name": "SETUP 03 - Create MANAGER 2",
+      "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('Status 201', () => pm.response.to.have.status(201));"] } }],
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{adminToken}}", "type": "string" }] },
+        "body": { "mode": "raw", "raw": "{\n  \"username\": \"{{manager2Username}}\",\n  \"password\": \"manager123\",\n  \"fullName\": \"Manager 2 Week 7\",\n  \"roleCode\": \"MANAGER\"\n}", "options": { "raw": { "language": "json" } } },
+        "url": { "raw": "{{baseUrl}}/api/users", "host": ["{{baseUrl}}"], "path": ["api", "users"] }
+      }
+    },
+    {
+      "name": "SETUP 04 - Create MEMBER 1",
+      "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('Status 201', () => pm.response.to.have.status(201));", "pm.collectionVariables.set('memberId', pm.response.json().id);"] } }],
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{adminToken}}", "type": "string" }] },
+        "body": { "mode": "raw", "raw": "{\n  \"username\": \"{{memberUsername}}\",\n  \"password\": \"member123\",\n  \"fullName\": \"Member Week 7\",\n  \"roleCode\": \"MEMBER\"\n}", "options": { "raw": { "language": "json" } } },
+        "url": { "raw": "{{baseUrl}}/api/users", "host": ["{{baseUrl}}"], "path": ["api", "users"] }
+      }
+    },
+    {
+      "name": "SETUP 05 - Create MEMBER 2",
+      "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('Status 201', () => pm.response.to.have.status(201));", "pm.collectionVariables.set('member2Id', pm.response.json().id);"] } }],
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{adminToken}}", "type": "string" }] },
+        "body": { "mode": "raw", "raw": "{\n  \"username\": \"{{member2Username}}\",\n  \"password\": \"member123\",\n  \"fullName\": \"Member 2 Week 7\",\n  \"roleCode\": \"MEMBER\"\n}", "options": { "raw": { "language": "json" } } },
+        "url": { "raw": "{{baseUrl}}/api/users", "host": ["{{baseUrl}}"], "path": ["api", "users"] }
+      }
+    },
+    {
+      "name": "SETUP 06 - Login MANAGER 1",
+      "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('Status 200', () => pm.response.to.have.status(200));", "pm.collectionVariables.set('managerToken', pm.response.json().accessToken);"] } }],
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": { "mode": "raw", "raw": "{\n  \"username\": \"{{managerUsername}}\",\n  \"password\": \"manager123\"\n}", "options": { "raw": { "language": "json" } } },
+        "url": { "raw": "{{baseUrl}}/api/auth/login", "host": ["{{baseUrl}}"], "path": ["api", "auth", "login"] }
+      }
+    },
+    {
+      "name": "SETUP 07 - Login MANAGER 2",
+      "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('Status 200', () => pm.response.to.have.status(200));", "pm.collectionVariables.set('manager2Token', pm.response.json().accessToken);"] } }],
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": { "mode": "raw", "raw": "{\n  \"username\": \"{{manager2Username}}\",\n  \"password\": \"manager123\"\n}", "options": { "raw": { "language": "json" } } },
+        "url": { "raw": "{{baseUrl}}/api/auth/login", "host": ["{{baseUrl}}"], "path": ["api", "auth", "login"] }
+      }
+    },
+    {
+      "name": "SETUP 08 - Login MEMBER",
+      "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('Status 200', () => pm.response.to.have.status(200));", "pm.collectionVariables.set('memberToken', pm.response.json().accessToken);"] } }],
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": { "mode": "raw", "raw": "{\n  \"username\": \"{{memberUsername}}\",\n  \"password\": \"member123\"\n}", "options": { "raw": { "language": "json" } } },
+        "url": { "raw": "{{baseUrl}}/api/auth/login", "host": ["{{baseUrl}}"], "path": ["api", "auth", "login"] }
+      }
+    },
+    {
+      "name": "SETUP 09 - Create Task with history",
+      "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('Status 201', () => pm.response.to.have.status(201));", "pm.collectionVariables.set('taskHistoryId', pm.response.json().id);"] } }],
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{managerToken}}", "type": "string" }] },
+        "body": { "mode": "raw", "raw": "{\n  \"title\": \"Task co lich su Week 7 {{runSuffix}}\",\n  \"description\": \"Task dung de tao lich su trang thai\",\n  \"priority\": \"HIGH\",\n  \"startDate\": \"2026-11-09\",\n  \"dueDate\": \"2026-11-30\",\n  \"assignedToId\": \"{{memberId}}\"\n}", "options": { "raw": { "language": "json" } } },
+        "url": { "raw": "{{baseUrl}}/api/tasks", "host": ["{{baseUrl}}"], "path": ["api", "tasks"] }
+      }
+    },
+    {
+      "name": "SETUP 10 - Create Task without history",
+      "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('Status 201', () => pm.response.to.have.status(201));", "pm.collectionVariables.set('taskNoHistoryId', pm.response.json().id);"] } }],
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{managerToken}}", "type": "string" }] },
+        "body": { "mode": "raw", "raw": "{\n  \"title\": \"Task chua doi trang thai Week 7 {{runSuffix}}\",\n  \"description\": \"Task nay phai tra ve danh sach lich su rong\",\n  \"priority\": \"MEDIUM\",\n  \"startDate\": \"2026-11-09\",\n  \"dueDate\": \"2026-12-01\",\n  \"assignedToId\": \"{{memberId}}\"\n}", "options": { "raw": { "language": "json" } } },
+        "url": { "raw": "{{baseUrl}}/api/tasks", "host": ["{{baseUrl}}"], "path": ["api", "tasks"] }
+      }
+    },
+    {
+      "name": "SETUP 11 - Create Task for conflict tests",
+      "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('Status 201', () => pm.response.to.have.status(201));", "pm.collectionVariables.set('taskConflictId', pm.response.json().id);"] } }],
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{managerToken}}", "type": "string" }] },
+        "body": { "mode": "raw", "raw": "{\n  \"title\": \"Task conflict Week 7 {{runSuffix}}\",\n  \"description\": \"Task dung de test 409\",\n  \"priority\": \"LOW\",\n  \"startDate\": \"2026-11-09\",\n  \"dueDate\": \"2026-12-05\",\n  \"assignedToId\": \"{{memberId}}\"\n}", "options": { "raw": { "language": "json" } } },
+        "url": { "raw": "{{baseUrl}}/api/tasks", "host": ["{{baseUrl}}"], "path": ["api", "tasks"] }
+      }
+    },
+    {
+      "name": "SETUP 12 - Create Task outside MEMBER and MANAGER scope",
+      "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('Status 201', () => pm.response.to.have.status(201));", "pm.collectionVariables.set('taskOtherManagerId', pm.response.json().id);"] } }],
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{manager2Token}}", "type": "string" }] },
+        "body": { "mode": "raw", "raw": "{\n  \"title\": \"Task ngoai pham vi Week 7 {{runSuffix}}\",\n  \"description\": \"Task cua MANAGER 2 giao cho MEMBER 2\",\n  \"priority\": \"MEDIUM\",\n  \"startDate\": \"2026-11-09\",\n  \"dueDate\": \"2026-12-10\",\n  \"assignedToId\": \"{{member2Id}}\"\n}", "options": { "raw": { "language": "json" } } },
+        "url": { "raw": "{{baseUrl}}/api/tasks", "host": ["{{baseUrl}}"], "path": ["api", "tasks"] }
+      }
+    },
+    {
+      "name": "TC01 - MEMBER TODO to IN_PROGRESS - 200 and history",
+      "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('Status 200', () => pm.response.to.have.status(200));", "pm.test('New status IN_PROGRESS', () => pm.expect(pm.response.json().status).to.eql('IN_PROGRESS'));" ] } }],
+      "request": {
+        "method": "PATCH",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{memberToken}}", "type": "string" }] },
+        "body": { "mode": "raw", "raw": "{\n  \"status\": \"IN_PROGRESS\"\n}", "options": { "raw": { "language": "json" } } },
+        "url": { "raw": "{{baseUrl}}/api/tasks/{{taskHistoryId}}/status", "host": ["{{baseUrl}}"], "path": ["api", "tasks", "{{taskHistoryId}}", "status"] }
+      }
+    },
+    {
+      "name": "TC02 - MEMBER IN_PROGRESS to COMPLETED - 200 and history",
+      "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('Status 200', () => pm.response.to.have.status(200));", "pm.test('New status COMPLETED', () => pm.expect(pm.response.json().status).to.eql('COMPLETED'));" ] } }],
+      "request": {
+        "method": "PATCH",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{memberToken}}", "type": "string" }] },
+        "body": { "mode": "raw", "raw": "{\n  \"status\": \"COMPLETED\"\n}", "options": { "raw": { "language": "json" } } },
+        "url": { "raw": "{{baseUrl}}/api/tasks/{{taskHistoryId}}/status", "host": ["{{baseUrl}}"], "path": ["api", "tasks", "{{taskHistoryId}}", "status"] }
+      }
+    },
+    {
+      "name": "TC03 - MEMBER COMPLETED to IN_PROGRESS - 200 and history",
+      "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('Status 200', () => pm.response.to.have.status(200));", "pm.test('New status IN_PROGRESS', () => pm.expect(pm.response.json().status).to.eql('IN_PROGRESS'));" ] } }],
+      "request": {
+        "method": "PATCH",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{memberToken}}", "type": "string" }] },
+        "body": { "mode": "raw", "raw": "{\n  \"status\": \"IN_PROGRESS\"\n}", "options": { "raw": { "language": "json" } } },
+        "url": { "raw": "{{baseUrl}}/api/tasks/{{taskHistoryId}}/status", "host": ["{{baseUrl}}"], "path": ["api", "tasks", "{{taskHistoryId}}", "status"] }
+      }
+    },
+    {
+      "name": "TC04 - TODO to COMPLETED directly - 409 no history",
+      "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('Status 409', () => pm.response.to.have.status(409));"] } }],
+      "request": {
+        "method": "PATCH",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{memberToken}}", "type": "string" }] },
+        "body": { "mode": "raw", "raw": "{\n  \"status\": \"COMPLETED\"\n}", "options": { "raw": { "language": "json" } } },
+        "url": { "raw": "{{baseUrl}}/api/tasks/{{taskConflictId}}/status", "host": ["{{baseUrl}}"], "path": ["api", "tasks", "{{taskConflictId}}", "status"] }
+      }
+    },
+    {
+      "name": "TC05 - Same current status - 409 no history",
+      "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('Status 409', () => pm.response.to.have.status(409));"] } }],
+      "request": {
+        "method": "PATCH",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{memberToken}}", "type": "string" }] },
+        "body": { "mode": "raw", "raw": "{\n  \"status\": \"TODO\"\n}", "options": { "raw": { "language": "json" } } },
+        "url": { "raw": "{{baseUrl}}/api/tasks/{{taskConflictId}}/status", "host": ["{{baseUrl}}"], "path": ["api", "tasks", "{{taskConflictId}}", "status"] }
+      }
+    },
+    {
+      "name": "TC06 - MEMBER view assigned Task history - 200",
+      "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('Status 200', () => pm.response.to.have.status(200));", "const history = pm.response.json();", "pm.test('Has 3 history records', () => pm.expect(history.length).to.eql(3));", "pm.test('Newest record is COMPLETED to IN_PROGRESS', () => { pm.expect(history[0].oldStatus).to.eql('COMPLETED'); pm.expect(history[0].newStatus).to.eql('IN_PROGRESS'); });" ] } }],
+      "request": {
+        "method": "GET",
+        "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{memberToken}}", "type": "string" }] },
+        "url": { "raw": "{{baseUrl}}/api/tasks/{{taskHistoryId}}/history", "host": ["{{baseUrl}}"], "path": ["api", "tasks", "{{taskHistoryId}}", "history"] }
+      }
+    },
+    {
+      "name": "TC07 - ADMIN view any Task history - 200",
+      "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('Status 200', () => pm.response.to.have.status(200));"] } }],
+      "request": {
+        "method": "GET",
+        "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{adminToken}}", "type": "string" }] },
+        "url": { "raw": "{{baseUrl}}/api/tasks/{{taskHistoryId}}/history", "host": ["{{baseUrl}}"], "path": ["api", "tasks", "{{taskHistoryId}}", "history"] }
+      }
+    },
+    {
+      "name": "TC08 - MANAGER view own Task history - 200",
+      "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('Status 200', () => pm.response.to.have.status(200));"] } }],
+      "request": {
+        "method": "GET",
+        "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{managerToken}}", "type": "string" }] },
+        "url": { "raw": "{{baseUrl}}/api/tasks/{{taskHistoryId}}/history", "host": ["{{baseUrl}}"], "path": ["api", "tasks", "{{taskHistoryId}}", "history"] }
+      }
+    },
+    {
+      "name": "TC09 - Task without history - 200 empty list",
+      "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('Status 200', () => pm.response.to.have.status(200));", "pm.test('History is empty', () => pm.expect(pm.response.json()).to.be.an('array').that.is.empty);" ] } }],
+      "request": {
+        "method": "GET",
+        "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{memberToken}}", "type": "string" }] },
+        "url": { "raw": "{{baseUrl}}/api/tasks/{{taskNoHistoryId}}/history", "host": ["{{baseUrl}}"], "path": ["api", "tasks", "{{taskNoHistoryId}}", "history"] }
+      }
+    },
+    {
+      "name": "TC10 - Task not found - 404",
+      "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('Status 404', () => pm.response.to.have.status(404));"] } }],
+      "request": {
+        "method": "GET",
+        "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{adminToken}}", "type": "string" }] },
+        "url": { "raw": "{{baseUrl}}/api/tasks/00000000-0000-0000-0000-000000000000/history", "host": ["{{baseUrl}}"], "path": ["api", "tasks", "00000000-0000-0000-0000-000000000000", "history"] }
+      }
+    },
+    {
+      "name": "TC11 - MEMBER view another MEMBER Task history - 403",
+      "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('Status 403', () => pm.response.to.have.status(403));"] } }],
+      "request": {
+        "method": "GET",
+        "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{memberToken}}", "type": "string" }] },
+        "url": { "raw": "{{baseUrl}}/api/tasks/{{taskOtherManagerId}}/history", "host": ["{{baseUrl}}"], "path": ["api", "tasks", "{{taskOtherManagerId}}", "history"] }
+      }
+    },
+    {
+      "name": "TC12 - MANAGER view Task outside scope - 403",
+      "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('Status 403', () => pm.response.to.have.status(403));"] } }],
+      "request": {
+        "method": "GET",
+        "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{managerToken}}", "type": "string" }] },
+        "url": { "raw": "{{baseUrl}}/api/tasks/{{taskOtherManagerId}}", "host": ["{{baseUrl}}"], "path": ["api", "tasks", "{{taskOtherManagerId}}"] }
+      }
+    },
+    {
+      "name": "TC13 - Request without JWT - 401",
+      "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('Status 401', () => pm.response.to.have.status(401));"] } }],
+      "request": {
+        "method": "GET",
+        "auth": { "type": "noauth" },
+        "url": { "raw": "{{baseUrl}}/api/tasks/{{taskHistoryId}}/history", "host": ["{{baseUrl}}"], "path": ["api", "tasks", "{{taskHistoryId}}", "history"] }
+      }
+    },
+    {
+      "name": "TC14 - Invalid JWT - 401",
+      "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('Status 401', () => pm.response.to.have.status(401));"] } }],
+      "request": {
+        "method": "GET",
+        "header": [{ "key": "Authorization", "value": "Bearer invalid.jwt.token", "type": "text" }],
+        "auth": { "type": "noauth" },
+        "url": { "raw": "{{baseUrl}}/api/tasks/{{taskHistoryId}}/history", "host": ["{{baseUrl}}"], "path": ["api", "tasks", "{{taskHistoryId}}", "history"] }
+      }
+    }
+  ]
+}
