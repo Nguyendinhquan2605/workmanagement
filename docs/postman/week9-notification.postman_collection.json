@@ -1,0 +1,377 @@
+{
+  "info": {
+    "name": "Workmanagement - Week 9 Notification",
+    "description": "Kiểm thử 20 trường hợp Tuần 9: Notification, phân quyền, validation, exception handling và Swagger/OpenAPI.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "baseUrl", "value": "http://localhost:8080" },
+    { "key": "w9Suffix", "value": "" },
+    { "key": "w9AdminToken", "value": "" },
+    { "key": "w9ManagerToken", "value": "" },
+    { "key": "w9Manager2Token", "value": "" },
+    { "key": "w9Member1Token", "value": "" },
+    { "key": "w9Member2Token", "value": "" },
+    { "key": "w9ManagerUsername", "value": "" },
+    { "key": "w9Manager2Username", "value": "" },
+    { "key": "w9Member1Username", "value": "" },
+    { "key": "w9Member2Username", "value": "" },
+    { "key": "w9InactiveUsername", "value": "" },
+    { "key": "w9Member1Id", "value": "" },
+    { "key": "w9Member2Id", "value": "" },
+    { "key": "w9InactiveId", "value": "" },
+    { "key": "w9TaskId", "value": "" },
+    { "key": "w9OtherTaskId", "value": "" },
+    { "key": "w9RoomId", "value": "" },
+    { "key": "w9ManagerNotificationId", "value": "" }
+  ],
+  "event": [
+    {
+      "listen": "prerequest",
+      "script": {
+        "type": "text/javascript",
+        "exec": [
+          "const auth = pm.request.auth;",
+          "if (auth && auth.type === 'bearer') {",
+          "  const tokenEntry = auth.bearer.find(item => item.key === 'token');",
+          "  const tokenRef = tokenEntry && tokenEntry.value;",
+          "  const match = typeof tokenRef === 'string' ? tokenRef.match(/^\\{\\{(.+)\\}\\}$/) : null;",
+          "  const token = match ? pm.collectionVariables.get(match[1]) : tokenRef;",
+          "  if (token) { pm.request.auth = { type: 'bearer', bearer: [{ key: 'token', value: token, type: 'string' }] }; }",
+          "}"
+        ]
+      }
+    }
+  ],
+  "item": [
+    {
+      "name": "SETUP 01 - Login ADMIN",
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "const suffix = Date.now().toString();",
+              "pm.collectionVariables.set('w9Suffix', suffix);",
+              "pm.collectionVariables.set('w9ManagerUsername', `manager_w9_${suffix}`);",
+              "pm.collectionVariables.set('w9Manager2Username', `manager2_w9_${suffix}`);",
+              "pm.collectionVariables.set('w9Member1Username', `member1_w9_${suffix}`);",
+              "pm.collectionVariables.set('w9Member2Username', `member2_w9_${suffix}`);",
+              "pm.collectionVariables.set('w9InactiveUsername', `inactive_w9_${suffix}`);"
+            ]
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Status 200', () => pm.response.to.have.status(200));",
+              "pm.collectionVariables.set('w9AdminToken', pm.response.json().accessToken);",
+              "pm.test('ADMIN token saved', () => pm.expect(pm.collectionVariables.get('w9AdminToken')).to.be.a('string').and.not.empty);"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": { "mode": "raw", "raw": "{\n  \"username\": \"admin\",\n  \"password\": \"admin123\"\n}", "options": { "raw": { "language": "json" } } },
+        "url": "{{baseUrl}}/api/auth/login"
+      }
+    },
+    {
+      "name": "SETUP 02 - Create MANAGER",
+      "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('Status 201', () => pm.response.to.have.status(201));"] } }],
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{w9AdminToken}}", "type": "string" }] },
+        "body": { "mode": "raw", "raw": "{\n  \"username\": \"{{w9ManagerUsername}}\",\n  \"password\": \"manager123\",\n  \"fullName\": \"Manager Week 9\",\n  \"roleCode\": \"MANAGER\"\n}", "options": { "raw": { "language": "json" } } },
+        "url": "{{baseUrl}}/api/users"
+      }
+    },
+    {
+      "name": "SETUP 03 - Create MANAGER 2",
+      "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('Status 201', () => pm.response.to.have.status(201));"] } }],
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{w9AdminToken}}", "type": "string" }] },
+        "body": { "mode": "raw", "raw": "{\n  \"username\": \"{{w9Manager2Username}}\",\n  \"password\": \"manager123\",\n  \"fullName\": \"Manager 2 Week 9\",\n  \"roleCode\": \"MANAGER\"\n}", "options": { "raw": { "language": "json" } } },
+        "url": "{{baseUrl}}/api/users"
+      }
+    },
+    {
+      "name": "SETUP 04 - Create MEMBER 1",
+      "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('Status 201', () => pm.response.to.have.status(201));", "pm.collectionVariables.set('w9Member1Id', pm.response.json().id);"] } }],
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{w9AdminToken}}", "type": "string" }] },
+        "body": { "mode": "raw", "raw": "{\n  \"username\": \"{{w9Member1Username}}\",\n  \"password\": \"member123\",\n  \"fullName\": \"Member 1 Week 9\",\n  \"roleCode\": \"MEMBER\"\n}", "options": { "raw": { "language": "json" } } },
+        "url": "{{baseUrl}}/api/users"
+      }
+    },
+    {
+      "name": "SETUP 05 - Create MEMBER 2",
+      "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('Status 201', () => pm.response.to.have.status(201));", "pm.collectionVariables.set('w9Member2Id', pm.response.json().id);"] } }],
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{w9AdminToken}}", "type": "string" }] },
+        "body": { "mode": "raw", "raw": "{\n  \"username\": \"{{w9Member2Username}}\",\n  \"password\": \"member123\",\n  \"fullName\": \"Member 2 Week 9\",\n  \"roleCode\": \"MEMBER\"\n}", "options": { "raw": { "language": "json" } } },
+        "url": "{{baseUrl}}/api/users"
+      }
+    },
+    {
+      "name": "SETUP 06 - Create INACTIVE MEMBER",
+      "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('Status 201', () => pm.response.to.have.status(201));", "pm.collectionVariables.set('w9InactiveId', pm.response.json().id);"] } }],
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{w9AdminToken}}", "type": "string" }] },
+        "body": { "mode": "raw", "raw": "{\n  \"username\": \"{{w9InactiveUsername}}\",\n  \"password\": \"member123\",\n  \"fullName\": \"Inactive Member Week 9\",\n  \"roleCode\": \"MEMBER\"\n}", "options": { "raw": { "language": "json" } } },
+        "url": "{{baseUrl}}/api/users"
+      }
+    },
+    {
+      "name": "SETUP 07 - Set INACTIVE status",
+      "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('Status 200', () => pm.response.to.have.status(200));"] } }],
+      "request": {
+        "method": "PATCH",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{w9AdminToken}}", "type": "string" }] },
+        "body": { "mode": "raw", "raw": "{\n  \"status\": \"INACTIVE\"\n}", "options": { "raw": { "language": "json" } } },
+        "url": "{{baseUrl}}/api/users/{{w9InactiveId}}/status"
+      }
+    },
+    {
+      "name": "SETUP 08 - Login MANAGER",
+      "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('Status 200', () => pm.response.to.have.status(200));", "pm.collectionVariables.set('w9ManagerToken', pm.response.json().accessToken);"] } }],
+      "request": { "method": "POST", "header": [{ "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\n  \"username\": \"{{w9ManagerUsername}}\",\n  \"password\": \"manager123\"\n}", "options": { "raw": { "language": "json" } } }, "url": "{{baseUrl}}/api/auth/login" }
+    },
+    {
+      "name": "SETUP 09 - Login MANAGER 2",
+      "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('Status 200', () => pm.response.to.have.status(200));", "pm.collectionVariables.set('w9Manager2Token', pm.response.json().accessToken);"] } }],
+      "request": { "method": "POST", "header": [{ "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\n  \"username\": \"{{w9Manager2Username}}\",\n  \"password\": \"manager123\"\n}", "options": { "raw": { "language": "json" } } }, "url": "{{baseUrl}}/api/auth/login" }
+    },
+    {
+      "name": "SETUP 10 - Login MEMBER 1",
+      "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('Status 200', () => pm.response.to.have.status(200));", "pm.collectionVariables.set('w9Member1Token', pm.response.json().accessToken);"] } }],
+      "request": { "method": "POST", "header": [{ "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\n  \"username\": \"{{w9Member1Username}}\",\n  \"password\": \"member123\"\n}", "options": { "raw": { "language": "json" } } }, "url": "{{baseUrl}}/api/auth/login" }
+    },
+    {
+      "name": "SETUP 11 - Login MEMBER 2",
+      "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('Status 200', () => pm.response.to.have.status(200));", "pm.collectionVariables.set('w9Member2Token', pm.response.json().accessToken);"] } }],
+      "request": { "method": "POST", "header": [{ "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\n  \"username\": \"{{w9Member2Username}}\",\n  \"password\": \"member123\"\n}", "options": { "raw": { "language": "json" } } }, "url": "{{baseUrl}}/api/auth/login" }
+    },
+    {
+      "name": "SETUP 12 - Create main Task assigned to MEMBER 1",
+      "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('Status 201', () => pm.response.to.have.status(201));", "pm.collectionVariables.set('w9TaskId', pm.response.json().id);"] } }],
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{w9ManagerToken}}", "type": "string" }] },
+        "body": { "mode": "raw", "raw": "{\n  \"title\": \"Week 9 notification task {{w9Suffix}}\",\n  \"description\": \"Task dùng để kiểm thử thông báo\",\n  \"priority\": \"HIGH\",\n  \"startDate\": \"2026-11-11\",\n  \"dueDate\": \"2026-11-30\",\n  \"assignedToId\": \"{{w9Member1Id}}\"\n}", "options": { "raw": { "language": "json" } } },
+        "url": "{{baseUrl}}/api/tasks"
+      }
+    },
+    {
+      "name": "SETUP 13 - Create Task outside MEMBER 1 scope",
+      "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('Status 201', () => pm.response.to.have.status(201));", "pm.collectionVariables.set('w9OtherTaskId', pm.response.json().id);"] } }],
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{w9Manager2Token}}", "type": "string" }] },
+        "body": { "mode": "raw", "raw": "{\n  \"title\": \"Task outside member scope {{w9Suffix}}\",\n  \"description\": \"Task thuộc MANAGER 2 và MEMBER 2\",\n  \"priority\": \"MEDIUM\",\n  \"assignedToId\": \"{{w9Member2Id}}\"\n}", "options": { "raw": { "language": "json" } } },
+        "url": "{{baseUrl}}/api/tasks"
+      }
+    },
+    {
+      "name": "TC01 - Giao Task cho MEMBER ACTIVE - TASK_ASSIGNED",
+      "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('Status 200', () => pm.response.to.have.status(200));", "const rows = pm.response.json();", "pm.test('TASK_ASSIGNED exists', () => pm.expect(rows.some(n => n.type === 'TASK_ASSIGNED' && n.taskId === pm.variables.get('w9TaskId'))).to.eql(true));"] } }],
+      "request": { "method": "GET", "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{w9Member1Token}}", "type": "string" }] }, "url": "{{baseUrl}}/api/notifications?isRead=false" }
+    },
+    {
+      "name": "TC02 - Thay đổi người phụ trách Task",
+      "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('Status 200', () => pm.response.to.have.status(200));"] } }],
+      "request": {
+        "method": "PATCH",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{w9ManagerToken}}", "type": "string" }] },
+        "body": { "mode": "raw", "raw": "{\n  \"assignedToId\": \"{{w9Member2Id}}\"\n}", "options": { "raw": { "language": "json" } } },
+        "url": "{{baseUrl}}/api/tasks/{{w9TaskId}}/assignee"
+      }
+    },
+    {
+      "name": "CHECK TC02 - MEMBER mới nhận TASK_ASSIGNED",
+      "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('Status 200', () => pm.response.to.have.status(200));", "const rows = pm.response.json();", "pm.test('New assignee notification exists', () => pm.expect(rows.some(n => n.type === 'TASK_ASSIGNED' && n.taskId === pm.variables.get('w9TaskId'))).to.eql(true));"] } }],
+      "request": { "method": "GET", "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{w9Member2Token}}", "type": "string" }] }, "url": "{{baseUrl}}/api/notifications?isRead=false" }
+    },
+    {
+      "name": "TC03 - MEMBER cập nhật trạng thái Task - TASK_STATUS_CHANGED",
+      "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('Status 200', () => pm.response.to.have.status(200));", "pm.test('Status is IN_PROGRESS', () => pm.expect(pm.response.json().status).to.eql('IN_PROGRESS'));" ] } }],
+      "request": {
+        "method": "PATCH",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{w9Member2Token}}", "type": "string" }] },
+        "body": { "mode": "raw", "raw": "{\n  \"status\": \"IN_PROGRESS\"\n}", "options": { "raw": { "language": "json" } } },
+        "url": "{{baseUrl}}/api/tasks/{{w9TaskId}}/status"
+      }
+    },
+    {
+      "name": "CHECK TC03 - Người liên quan nhận TASK_STATUS_CHANGED",
+      "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('Status 200', () => pm.response.to.have.status(200));", "const rows = pm.response.json();", "const found = rows.find(n => n.type === 'TASK_STATUS_CHANGED' && n.taskId === pm.variables.get('w9TaskId'));", "pm.test('TASK_STATUS_CHANGED exists', () => pm.expect(found).to.exist);", "if (found) pm.collectionVariables.set('w9ManagerNotificationId', found.id);"] } }],
+      "request": { "method": "GET", "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{w9ManagerToken}}", "type": "string" }] }, "url": "{{baseUrl}}/api/notifications?isRead=false" }
+    },
+    {
+      "name": "TC04 - Thêm MEMBER vào Chat Room - ROOM_MEMBER_ADDED",
+      "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('Status 201', () => pm.response.to.have.status(201));", "pm.collectionVariables.set('w9RoomId', pm.response.json().id);"] } }],
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{w9AdminToken}}", "type": "string" }] },
+        "body": { "mode": "raw", "raw": "{\n  \"name\": \"Week 9 Notification Room {{w9Suffix}}\",\n  \"description\": \"Phòng kiểm thử thông báo\"\n}", "options": { "raw": { "language": "json" } } },
+        "url": "{{baseUrl}}/api/chat-rooms"
+      }
+    },
+    {
+      "name": "TC04B - Add MEMBER 1 to Chat Room",
+      "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('Status 201', () => pm.response.to.have.status(201));"] } }],
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{w9AdminToken}}", "type": "string" }] },
+        "body": { "mode": "raw", "raw": "{\n  \"userId\": \"{{w9Member1Id}}\"\n}", "options": { "raw": { "language": "json" } } },
+        "url": "{{baseUrl}}/api/chat-rooms/{{w9RoomId}}/members"
+      }
+    },
+    {
+      "name": "CHECK TC04 - MEMBER nhận ROOM_MEMBER_ADDED",
+      "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('Status 200', () => pm.response.to.have.status(200));", "const rows = pm.response.json();", "pm.test('ROOM_MEMBER_ADDED exists', () => pm.expect(rows.some(n => n.type === 'ROOM_MEMBER_ADDED' && n.roomId === pm.variables.get('w9RoomId'))).to.eql(true));"] } }],
+      "request": { "method": "GET", "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{w9Member1Token}}", "type": "string" }] }, "url": "{{baseUrl}}/api/notifications?isRead=false" }
+    },
+    {
+      "name": "TC05 - Nghiệp vụ giao việc bị từ chối - không tạo Notification",
+      "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('Status 400', () => pm.response.to.have.status(400));"] } }],
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{w9ManagerToken}}", "type": "string" }] },
+        "body": { "mode": "raw", "raw": "{\n  \"title\": \"Task giao sai đối tượng\",\n  \"description\": \"Không được giao cho INACTIVE MEMBER\",\n  \"priority\": \"MEDIUM\",\n  \"assignedToId\": \"{{w9InactiveId}}\"\n}", "options": { "raw": { "language": "json" } } },
+        "url": "{{baseUrl}}/api/tasks"
+      }
+    },
+    {
+      "name": "TC06 - GET danh sách thông báo của mình - 200",
+      "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('Status 200', () => pm.response.to.have.status(200));", "pm.test('Response is array', () => pm.expect(pm.response.json()).to.be.an('array'));" ] } }],
+      "request": { "method": "GET", "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{w9ManagerToken}}", "type": "string" }] }, "url": "{{baseUrl}}/api/notifications" }
+    },
+    {
+      "name": "TC07 - Lọc isRead=false - 200",
+      "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('Status 200', () => pm.response.to.have.status(200));", "pm.test('Only unread notifications', () => pm.response.json().forEach(n => pm.expect(n.read).to.eql(false)));" ] } }],
+      "request": { "method": "GET", "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{w9ManagerToken}}", "type": "string" }] }, "url": "{{baseUrl}}/api/notifications?isRead=false" }
+    },
+    {
+      "name": "TC08 - Xem chi tiết thông báo của mình - 200",
+      "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('Status 200', () => pm.response.to.have.status(200));", "pm.test('Correct notification id', () => pm.expect(pm.response.json().id).to.eql(pm.variables.get('w9ManagerNotificationId')));" ] } }],
+      "request": { "method": "GET", "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{w9ManagerToken}}", "type": "string" }] }, "url": "{{baseUrl}}/api/notifications/{{w9ManagerNotificationId}}" }
+    },
+    {
+      "name": "TC09 - Đánh dấu thông báo của mình đã đọc - 200",
+      "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('Status 200', () => pm.response.to.have.status(200));", "pm.test('read is true', () => pm.expect(pm.response.json().read).to.eql(true));" ] } }],
+      "request": { "method": "PATCH", "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{w9ManagerToken}}", "type": "string" }] }, "url": "{{baseUrl}}/api/notifications/{{w9ManagerNotificationId}}/read" }
+    },
+    {
+      "name": "TC10 - Đánh dấu lại thông báo đã đọc - 200, không tạo bản ghi mới",
+      "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('Status 200', () => pm.response.to.have.status(200));", "pm.test('Still read=true', () => pm.expect(pm.response.json().read).to.eql(true));" ] } }],
+      "request": { "method": "PATCH", "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{w9ManagerToken}}", "type": "string" }] }, "url": "{{baseUrl}}/api/notifications/{{w9ManagerNotificationId}}/read" }
+    },
+    {
+      "name": "TC11 - Xem thông báo của người khác - 403",
+      "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('Status 403', () => pm.response.to.have.status(403));"] } }],
+      "request": { "method": "GET", "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{w9Member1Token}}", "type": "string" }] }, "url": "{{baseUrl}}/api/notifications/{{w9ManagerNotificationId}}" }
+    },
+    {
+      "name": "TC12 - Đánh dấu thông báo của người khác - 403",
+      "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('Status 403', () => pm.response.to.have.status(403));"] } }],
+      "request": { "method": "PATCH", "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{w9Member1Token}}", "type": "string" }] }, "url": "{{baseUrl}}/api/notifications/{{w9ManagerNotificationId}}/read" }
+    },
+    {
+      "name": "TC13 - Thông báo không tồn tại - 404",
+      "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('Status 404', () => pm.response.to.have.status(404));"] } }],
+      "request": { "method": "GET", "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{w9ManagerToken}}", "type": "string" }] }, "url": "{{baseUrl}}/api/notifications/00000000-0000-0000-0000-000000000000" }
+    },
+    {
+      "name": "TC14 - Không có JWT - 401",
+      "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('Status 401', () => pm.response.to.have.status(401));"] } }],
+      "request": { "method": "GET", "auth": { "type": "noauth" }, "url": "{{baseUrl}}/api/notifications" }
+    },
+    {
+      "name": "TC15 - JWT sai hoặc hết hạn - 401",
+      "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('Status 401', () => pm.response.to.have.status(401));"] } }],
+      "request": { "method": "GET", "auth": { "type": "noauth" }, "header": [{ "key": "Authorization", "value": "Bearer invalid.jwt.token" }], "url": "{{baseUrl}}/api/notifications" }
+    },
+    {
+      "name": "TC16 - Gửi dữ liệu đầu vào không hợp lệ - 400",
+      "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('Status 400', () => pm.response.to.have.status(400));"] } }],
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{w9ManagerToken}}", "type": "string" }] },
+        "body": { "mode": "raw", "raw": "{\n  \"title\": \"\",\n  \"description\": \"Thiếu tiêu đề\",\n  \"priority\": \"HIGH\"\n}", "options": { "raw": { "language": "json" } } },
+        "url": "{{baseUrl}}/api/tasks"
+      }
+    },
+    {
+      "name": "TC17 - Gửi yêu cầu xung đột nghiệp vụ - 409",
+      "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('Status 409', () => pm.response.to.have.status(409));"] } }],
+      "request": {
+        "method": "PATCH",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{w9Member2Token}}", "type": "string" }] },
+        "body": { "mode": "raw", "raw": "{\n  \"status\": \"IN_PROGRESS\"\n}", "options": { "raw": { "language": "json" } } },
+        "url": "{{baseUrl}}/api/tasks/{{w9TaskId}}/status"
+      }
+    },
+    {
+      "name": "TC18 - MEMBER truy cập Task ngoài phạm vi - 403",
+      "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('Status 403', () => pm.response.to.have.status(403));"] } }],
+      "request": { "method": "GET", "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{w9Member1Token}}", "type": "string" }] }, "url": "{{baseUrl}}/api/tasks/{{w9OtherTaskId}}" }
+    },
+    {
+      "name": "SETUP 14 - Create room for outsider test",
+      "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('Status 201', () => pm.response.to.have.status(201));", "pm.collectionVariables.set('w9RoomId', pm.response.json().id);"] } }],
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{w9AdminToken}}", "type": "string" }] },
+        "body": { "mode": "raw", "raw": "{\n  \"name\": \"Week 9 outsider room {{w9Suffix}}\",\n  \"description\": \"Phòng kiểm tra phạm vi tin nhắn\"\n}", "options": { "raw": { "language": "json" } } },
+        "url": "{{baseUrl}}/api/chat-rooms"
+      }
+    },
+    {
+      "name": "SETUP 15 - Add MEMBER 2 to outsider test room",
+      "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('Status 201', () => pm.response.to.have.status(201));"] } }],
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{w9AdminToken}}", "type": "string" }] },
+        "body": { "mode": "raw", "raw": "{\n  \"userId\": \"{{w9Member2Id}}\"\n}", "options": { "raw": { "language": "json" } } },
+        "url": "{{baseUrl}}/api/chat-rooms/{{w9RoomId}}/members"
+      }
+    },
+    {
+      "name": "TC19 - Người ngoài phòng truy vấn tin nhắn - 403",
+      "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('Status 403', () => pm.response.to.have.status(403));"] } }],
+      "request": { "method": "GET", "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{w9Manager2Token}}", "type": "string" }] }, "url": "{{baseUrl}}/api/chat-rooms/{{w9RoomId}}/messages" }
+    },
+    {
+      "name": "TC20 - Rà soát Swagger/OpenAPI - 200",
+      "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('Status 200', () => pm.response.to.have.status(200));", "const body = pm.response.json();", "pm.test('Notification API exists', () => pm.expect(body.paths['/api/notifications']).to.exist);", "pm.test('Task API exists', () => pm.expect(body.paths['/api/tasks']).to.exist);", "pm.test('Chat Room API exists', () => pm.expect(body.paths['/api/chat-rooms']).to.exist);" ] } }],
+      "request": { "method": "GET", "auth": { "type": "noauth" }, "url": "{{baseUrl}}/v3/api-docs" }
+    }
+  ]
+}

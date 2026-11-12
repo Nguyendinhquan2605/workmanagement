@@ -9,6 +9,7 @@ import com.bachhoa.workmanagement.entity.User;
 import com.bachhoa.workmanagement.entity.enums.TaskPriority;
 import com.bachhoa.workmanagement.entity.enums.TaskStatus;
 import com.bachhoa.workmanagement.entity.enums.UserStatus;
+import com.bachhoa.workmanagement.notification.NotificationService;
 import com.bachhoa.workmanagement.repository.TaskHistoryRepository;
 import com.bachhoa.workmanagement.repository.TaskRepository;
 import com.bachhoa.workmanagement.repository.UserRepository;
@@ -20,6 +21,7 @@ import com.bachhoa.workmanagement.task.dto.TaskHistoryResponse;
 import com.bachhoa.workmanagement.task.dto.UpdateTaskRequest;
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Objects;
 import java.util.UUID;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.jpa.domain.Specification;
@@ -34,14 +36,17 @@ public class TaskService {
     private final TaskRepository taskRepository;
     private final TaskHistoryRepository taskHistoryRepository;
     private final UserRepository userRepository;
+    private final NotificationService notificationService;
 
     public TaskService(
             TaskRepository taskRepository,
             TaskHistoryRepository taskHistoryRepository,
-            UserRepository userRepository) {
+            UserRepository userRepository,
+            NotificationService notificationService) {
         this.taskRepository = taskRepository;
         this.taskHistoryRepository = taskHistoryRepository;
         this.userRepository = userRepository;
+        this.notificationService = notificationService;
     }
 
     @Transactional(readOnly = true)
@@ -109,7 +114,9 @@ public class TaskService {
         task.setCreatedBy(actor);
         task.setAssignedTo(resolveAssignee(request.assignedToId()));
 
-        return toResponse(taskRepository.save(task));
+        Task savedTask = taskRepository.save(task);
+        notificationService.notifyTaskAssigned(savedTask);
+        return toResponse(savedTask);
     }
 
     @Transactional
@@ -140,8 +147,18 @@ public class TaskService {
         Task task = findTask(id);
         assertCanManage(task, actor);
 
-        task.setAssignedTo(resolveAssignee(request.assignedToId()));
-        return toResponse(taskRepository.save(task));
+        UUID previousAssigneeId = task.getAssignedTo() == null
+                ? null
+                : task.getAssignedTo().getId();
+        User newAssignee = resolveAssignee(request.assignedToId());
+        task.setAssignedTo(newAssignee);
+        Task savedTask = taskRepository.save(task);
+
+        if (!Objects.equals(previousAssigneeId,
+                newAssignee == null ? null : newAssignee.getId())) {
+            notificationService.notifyTaskAssigned(savedTask);
+        }
+        return toResponse(savedTask);
     }
 
     @Transactional
@@ -166,6 +183,7 @@ public class TaskService {
 
         taskRepository.save(task);
         taskHistoryRepository.save(history);
+        notificationService.notifyTaskStatusChanged(task, actor);
         return toResponse(task);
     }
 

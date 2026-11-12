@@ -1,0 +1,464 @@
+{
+  "info": {
+    "name": "Workmanagement - Week 8 Chat Room",
+    "description": "Kiểm thử API phòng chat, thành viên và tin nhắn Tuần 8 theo 21 trường hợp trong báo cáo.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "baseUrl", "value": "http://localhost:8080" },
+    { "key": "runSuffix", "value": "" },
+    { "key": "adminToken", "value": "" },
+    { "key": "managerToken", "value": "" },
+    { "key": "manager2Token", "value": "" },
+    { "key": "member1Token", "value": "" },
+    { "key": "member2Token", "value": "" },
+    { "key": "managerUsername", "value": "" },
+    { "key": "manager2Username", "value": "" },
+    { "key": "member1Username", "value": "" },
+    { "key": "member2Username", "value": "" },
+    { "key": "inactiveUsername", "value": "" },
+    { "key": "member1Id", "value": "" },
+    { "key": "member2Id", "value": "" },
+    { "key": "inactiveMemberId", "value": "" },
+    { "key": "adminRoomId", "value": "" },
+    { "key": "managerRoomId", "value": "" },
+    { "key": "message1Id", "value": "" },
+    { "key": "message2Id", "value": "" }
+  ],
+  "event": [
+    {
+      "listen": "prerequest",
+      "script": {
+        "type": "text/javascript",
+        "exec": [
+          "const auth = pm.request.auth;",
+          "if (auth && auth.type === 'bearer') {",
+          "  const tokenEntry = auth.bearer.find(item => item.key === 'token');",
+          "  const tokenRef = tokenEntry && tokenEntry.value;",
+          "  const match = typeof tokenRef === 'string' ? tokenRef.match(/^\\{\\{(.+)\\}\\}$/) : null;",
+          "  const token = match ? pm.collectionVariables.get(match[1]) : tokenRef;",
+          "  if (token) {",
+          "    pm.request.auth = { type: 'bearer', bearer: [{ key: 'token', value: token, type: 'string' }] };",
+          "  }",
+          "}"
+        ]
+      }
+    }
+  ],
+  "item": [
+    {
+      "name": "SETUP 01 - Login ADMIN",
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "const suffix = Date.now().toString();",
+              "pm.collectionVariables.set('runSuffix', suffix);",
+              "pm.collectionVariables.set('managerUsername', `manager_w8_${suffix}`);",
+              "pm.collectionVariables.set('manager2Username', `manager2_w8_${suffix}`);",
+              "pm.collectionVariables.set('member1Username', `member1_w8_${suffix}`);",
+              "pm.collectionVariables.set('member2Username', `member2_w8_${suffix}`);",
+              "pm.collectionVariables.set('inactiveUsername', `inactive_w8_${suffix}`);"
+            ]
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Status 200', () => pm.response.to.have.status(200));",
+              "pm.collectionVariables.set('adminToken', pm.response.json().accessToken);",
+              "pm.test('ADMIN token saved', () => pm.expect(pm.collectionVariables.get('adminToken')).to.be.a('string').and.not.empty);"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": { "mode": "raw", "raw": "{\n  \"username\": \"admin\",\n  \"password\": \"admin123\"\n}", "options": { "raw": { "language": "json" } } },
+        "url": "{{baseUrl}}/api/auth/login"
+      }
+    },
+    {
+      "name": "SETUP 02 - Create MANAGER",
+      "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('Status 201', () => pm.response.to.have.status(201));"] } }],
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{adminToken}}", "type": "string" }] },
+        "body": { "mode": "raw", "raw": "{\n  \"username\": \"{{managerUsername}}\",\n  \"password\": \"manager123\",\n  \"fullName\": \"Manager Week 8\",\n  \"roleCode\": \"MANAGER\"\n}", "options": { "raw": { "language": "json" } } },
+        "url": "{{baseUrl}}/api/users"
+      }
+    },
+    {
+      "name": "SETUP 03 - Create MANAGER 2",
+      "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('Status 201', () => pm.response.to.have.status(201));"] } }],
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{adminToken}}", "type": "string" }] },
+        "body": { "mode": "raw", "raw": "{\n  \"username\": \"{{manager2Username}}\",\n  \"password\": \"manager123\",\n  \"fullName\": \"Manager 2 Week 8\",\n  \"roleCode\": \"MANAGER\"\n}", "options": { "raw": { "language": "json" } } },
+        "url": "{{baseUrl}}/api/users"
+      }
+    },
+    {
+      "name": "SETUP 04 - Create MEMBER 1",
+      "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('Status 201', () => pm.response.to.have.status(201));", "pm.collectionVariables.set('member1Id', pm.response.json().id);"] } }],
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{adminToken}}", "type": "string" }] },
+        "body": { "mode": "raw", "raw": "{\n  \"username\": \"{{member1Username}}\",\n  \"password\": \"member123\",\n  \"fullName\": \"Member 1 Week 8\",\n  \"roleCode\": \"MEMBER\"\n}", "options": { "raw": { "language": "json" } } },
+        "url": "{{baseUrl}}/api/users"
+      }
+    },
+    {
+      "name": "SETUP 05 - Create MEMBER 2",
+      "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('Status 201', () => pm.response.to.have.status(201));", "pm.collectionVariables.set('member2Id', pm.response.json().id);"] } }],
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{adminToken}}", "type": "string" }] },
+        "body": { "mode": "raw", "raw": "{\n  \"username\": \"{{member2Username}}\",\n  \"password\": \"member123\",\n  \"fullName\": \"Member 2 Week 8\",\n  \"roleCode\": \"MEMBER\"\n}", "options": { "raw": { "language": "json" } } },
+        "url": "{{baseUrl}}/api/users"
+      }
+    },
+    {
+      "name": "SETUP 06 - Create INACTIVE MEMBER",
+      "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('Status 201', () => pm.response.to.have.status(201));", "pm.collectionVariables.set('inactiveMemberId', pm.response.json().id);"] } }],
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{adminToken}}", "type": "string" }] },
+        "body": { "mode": "raw", "raw": "{\n  \"username\": \"{{inactiveUsername}}\",\n  \"password\": \"member123\",\n  \"fullName\": \"Inactive Member Week 8\",\n  \"roleCode\": \"MEMBER\"\n}", "options": { "raw": { "language": "json" } } },
+        "url": "{{baseUrl}}/api/users"
+      }
+    },
+    {
+      "name": "SETUP 07 - Set MEMBER inactive",
+      "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('Status 200', () => pm.response.to.have.status(200));"] } }],
+      "request": {
+        "method": "PATCH",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{adminToken}}", "type": "string" }] },
+        "body": { "mode": "raw", "raw": "{\n  \"status\": \"INACTIVE\"\n}", "options": { "raw": { "language": "json" } } },
+        "url": "{{baseUrl}}/api/users/{{inactiveMemberId}}/status"
+      }
+    },
+    {
+      "name": "SETUP 08 - Login MANAGER",
+      "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('Status 200', () => pm.response.to.have.status(200));", "pm.collectionVariables.set('managerToken', pm.response.json().accessToken);"] } }],
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": { "mode": "raw", "raw": "{\n  \"username\": \"{{managerUsername}}\",\n  \"password\": \"manager123\"\n}", "options": { "raw": { "language": "json" } } },
+        "url": "{{baseUrl}}/api/auth/login"
+      }
+    },
+    {
+      "name": "SETUP 09 - Login MANAGER 2",
+      "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('Status 200', () => pm.response.to.have.status(200));", "pm.collectionVariables.set('manager2Token', pm.response.json().accessToken);"] } }],
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": { "mode": "raw", "raw": "{\n  \"username\": \"{{manager2Username}}\",\n  \"password\": \"manager123\"\n}", "options": { "raw": { "language": "json" } } },
+        "url": "{{baseUrl}}/api/auth/login"
+      }
+    },
+    {
+      "name": "SETUP 10 - Login MEMBER 1",
+      "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('Status 200', () => pm.response.to.have.status(200));", "pm.collectionVariables.set('member1Token', pm.response.json().accessToken);"] } }],
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": { "mode": "raw", "raw": "{\n  \"username\": \"{{member1Username}}\",\n  \"password\": \"member123\"\n}", "options": { "raw": { "language": "json" } } },
+        "url": "{{baseUrl}}/api/auth/login"
+      }
+    },
+    {
+      "name": "SETUP 11 - Login MEMBER 2",
+      "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('Status 200', () => pm.response.to.have.status(200));", "pm.collectionVariables.set('member2Token', pm.response.json().accessToken);"] } }],
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": { "mode": "raw", "raw": "{\n  \"username\": \"{{member2Username}}\",\n  \"password\": \"member123\"\n}", "options": { "raw": { "language": "json" } } },
+        "url": "{{baseUrl}}/api/auth/login"
+      }
+    },
+    {
+      "name": "SETUP 12 - ADMIN create room",
+      "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('Status 201', () => pm.response.to.have.status(201));", "pm.collectionVariables.set('adminRoomId', pm.response.json().id);"] } }],
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{adminToken}}", "type": "string" }] },
+        "body": { "mode": "raw", "raw": "{\n  \"name\": \"Phòng kiểm thử Admin Week 8 {{runSuffix}}\",\n  \"description\": \"Phòng dùng để kiểm thử API chat\"\n}", "options": { "raw": { "language": "json" } } },
+        "url": "{{baseUrl}}/api/chat-rooms"
+      }
+    },
+    {
+      "name": "SETUP 13 - MANAGER create room",
+      "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('Status 201', () => pm.response.to.have.status(201));", "pm.collectionVariables.set('managerRoomId', pm.response.json().id);"] } }],
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{managerToken}}", "type": "string" }] },
+        "body": { "mode": "raw", "raw": "{\n  \"name\": \"Phòng kiểm thử Manager Week 8 {{runSuffix}}\",\n  \"description\": \"Phòng do Manager tạo\"\n}", "options": { "raw": { "language": "json" } } },
+        "url": "{{baseUrl}}/api/chat-rooms"
+      }
+    },
+    {
+      "name": "API bổ sung - ADMIN xem danh sách phòng",
+      "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('Status 200', () => pm.response.to.have.status(200));"] } }],
+      "request": {
+        "method": "GET",
+        "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{adminToken}}", "type": "string" }] },
+        "url": "{{baseUrl}}/api/chat-rooms"
+      }
+    },
+    {
+      "name": "API bổ sung - ADMIN xem chi tiết phòng",
+      "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('Status 200', () => pm.response.to.have.status(200));"] } }],
+      "request": {
+        "method": "GET",
+        "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{adminToken}}", "type": "string" }] },
+        "url": "{{baseUrl}}/api/chat-rooms/{{adminRoomId}}"
+      }
+    },
+    {
+      "name": "TC03 - MEMBER tạo phòng - 403 Forbidden",
+      "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('Status 403', () => pm.response.to.have.status(403));"] } }],
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{member1Token}}", "type": "string" }] },
+        "body": { "mode": "raw", "raw": "{\n  \"name\": \"Phòng không hợp lệ\",\n  \"description\": \"MEMBER không được tạo phòng\"\n}", "options": { "raw": { "language": "json" } } },
+        "url": "{{baseUrl}}/api/chat-rooms"
+      }
+    },
+    {
+      "name": "TC04 - Người tạo xuất hiện trong danh sách thành viên - 200",
+      "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('Status 200', () => pm.response.to.have.status(200));", "pm.test('Creator is a member', () => pm.expect(pm.response.json().some(item => item.username === pm.variables.get('managerUsername'))).to.eql(true));"] } }],
+      "request": {
+        "method": "GET",
+        "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{managerToken}}", "type": "string" }] },
+        "url": "{{baseUrl}}/api/chat-rooms/{{managerRoomId}}/members"
+      }
+    },
+    {
+      "name": "TC05 - Thêm MEMBER ACTIVE - 201 Created",
+      "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('Status 201', () => pm.response.to.have.status(201));"] } }],
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{adminToken}}", "type": "string" }] },
+        "body": { "mode": "raw", "raw": "{\n  \"userId\": \"{{member1Id}}\"\n}", "options": { "raw": { "language": "json" } } },
+        "url": "{{baseUrl}}/api/chat-rooms/{{adminRoomId}}/members"
+      }
+    },
+    {
+      "name": "TC06 - Thêm thành viên trùng - 409 Conflict",
+      "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('Status 409', () => pm.response.to.have.status(409));"] } }],
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{adminToken}}", "type": "string" }] },
+        "body": { "mode": "raw", "raw": "{\n  \"userId\": \"{{member1Id}}\"\n}", "options": { "raw": { "language": "json" } } },
+        "url": "{{baseUrl}}/api/chat-rooms/{{adminRoomId}}/members"
+      }
+    },
+    {
+      "name": "TC07 - Thêm MEMBER INACTIVE - 400 Bad Request",
+      "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('Status 400', () => pm.response.to.have.status(400));"] } }],
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{adminToken}}", "type": "string" }] },
+        "body": { "mode": "raw", "raw": "{\n  \"userId\": \"{{inactiveMemberId}}\"\n}", "options": { "raw": { "language": "json" } } },
+        "url": "{{baseUrl}}/api/chat-rooms/{{adminRoomId}}/members"
+      }
+    },
+    {
+      "name": "PREP - Thêm MEMBER 2 để kiểm thử tin nhắn",
+      "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('Status 201', () => pm.response.to.have.status(201));"] } }],
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{adminToken}}", "type": "string" }] },
+        "body": { "mode": "raw", "raw": "{\n  \"userId\": \"{{member2Id}}\"\n}", "options": { "raw": { "language": "json" } } },
+        "url": "{{baseUrl}}/api/chat-rooms/{{adminRoomId}}/members"
+      }
+    },
+    {
+      "name": "TC08 - Xem danh sách thành viên phòng hợp lệ - 200",
+      "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('Status 200', () => pm.response.to.have.status(200));", "pm.test('Member 1 exists', () => pm.expect(pm.response.json().some(item => item.userId === pm.variables.get('member1Id'))).to.eql(true));"] } }],
+      "request": {
+        "method": "GET",
+        "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{adminToken}}", "type": "string" }] },
+        "url": "{{baseUrl}}/api/chat-rooms/{{adminRoomId}}/members"
+      }
+    },
+    {
+      "name": "TC09 - MANAGER sửa phòng do mình tạo - 200 OK",
+      "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('Status 200', () => pm.response.to.have.status(200));"] } }],
+      "request": {
+        "method": "PUT",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{managerToken}}", "type": "string" }] },
+        "body": { "mode": "raw", "raw": "{\n  \"name\": \"Phòng Manager đã cập nhật\",\n  \"description\": \"Mô tả đã được thay đổi\"\n}", "options": { "raw": { "language": "json" } } },
+        "url": "{{baseUrl}}/api/chat-rooms/{{managerRoomId}}"
+      }
+    },
+    {
+      "name": "TC10 - MANAGER khác sửa phòng không thuộc quyền - 403",
+      "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('Status 403', () => pm.response.to.have.status(403));"] } }],
+      "request": {
+        "method": "PUT",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{manager2Token}}", "type": "string" }] },
+        "body": { "mode": "raw", "raw": "{\n  \"name\": \"Không được phép sửa\",\n  \"description\": \"Request phải bị từ chối\"\n}", "options": { "raw": { "language": "json" } } },
+        "url": "{{baseUrl}}/api/chat-rooms/{{managerRoomId}}"
+      }
+    },
+    {
+      "name": "TC11 - Thành viên gửi tin nhắn - 201 Created",
+      "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('Status 201', () => pm.response.to.have.status(201));", "pm.collectionVariables.set('message1Id', pm.response.json().id);"] } }],
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{member1Token}}", "type": "string" }] },
+        "body": { "mode": "raw", "raw": "{\n  \"content\": \"Tin nhắn của Member 1 Week 8\"\n}", "options": { "raw": { "language": "json" } } },
+        "url": "{{baseUrl}}/api/chat-rooms/{{adminRoomId}}/messages"
+      }
+    },
+    {
+      "name": "PREP - MEMBER 2 gửi tin nhắn của mình",
+      "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('Status 201', () => pm.response.to.have.status(201));", "pm.collectionVariables.set('message2Id', pm.response.json().id);"] } }],
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{member2Token}}", "type": "string" }] },
+        "body": { "mode": "raw", "raw": "{\n  \"content\": \"Tin nhắn của Member 2\"\n}", "options": { "raw": { "language": "json" } } },
+        "url": "{{baseUrl}}/api/chat-rooms/{{adminRoomId}}/messages"
+      }
+    },
+    {
+      "name": "TC12 - Thành viên xem danh sách tin nhắn - 200 OK",
+      "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('Status 200', () => pm.response.to.have.status(200));", "pm.test('Messages is an array', () => pm.expect(pm.response.json()).to.be.an('array'));" ] } }],
+      "request": {
+        "method": "GET",
+        "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{member1Token}}", "type": "string" }] },
+        "url": "{{baseUrl}}/api/chat-rooms/{{adminRoomId}}/messages"
+      }
+    },
+    {
+      "name": "TC13 - Người ngoài phòng xem tin nhắn - 403 Forbidden",
+      "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('Status 403', () => pm.response.to.have.status(403));"] } }],
+      "request": {
+        "method": "GET",
+        "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{manager2Token}}", "type": "string" }] },
+        "url": "{{baseUrl}}/api/chat-rooms/{{adminRoomId}}/messages"
+      }
+    },
+    {
+      "name": "TC14 - Người ngoài phòng gửi tin nhắn - 403 Forbidden",
+      "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('Status 403', () => pm.response.to.have.status(403));"] } }],
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{manager2Token}}", "type": "string" }] },
+        "body": { "mode": "raw", "raw": "{\n  \"content\": \"Tin nhắn không được phép\"\n}", "options": { "raw": { "language": "json" } } },
+        "url": "{{baseUrl}}/api/chat-rooms/{{adminRoomId}}/messages"
+      }
+    },
+    {
+      "name": "TC15 - Người gửi sửa tin nhắn của mình - 200 OK",
+      "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('Status 200', () => pm.response.to.have.status(200));"] } }],
+      "request": {
+        "method": "PUT",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{member1Token}}", "type": "string" }] },
+        "body": { "mode": "raw", "raw": "{\n  \"content\": \"Tin nhắn Member 1 đã được sửa\"\n}", "options": { "raw": { "language": "json" } } },
+        "url": "{{baseUrl}}/api/chat-rooms/{{adminRoomId}}/messages/{{message1Id}}"
+      }
+    },
+    {
+      "name": "TC16 - Người khác sửa tin nhắn - 403 Forbidden",
+      "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('Status 403', () => pm.response.to.have.status(403));"] } }],
+      "request": {
+        "method": "PUT",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{member1Token}}", "type": "string" }] },
+        "body": { "mode": "raw", "raw": "{\n  \"content\": \"Không được sửa tin nhắn của Member 2\"\n}", "options": { "raw": { "language": "json" } } },
+        "url": "{{baseUrl}}/api/chat-rooms/{{adminRoomId}}/messages/{{message2Id}}"
+      }
+    },
+    {
+      "name": "TC17 - Người gửi xóa tin nhắn của mình - 204 No Content",
+      "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('Status 204', () => pm.response.to.have.status(204));"] } }],
+      "request": {
+        "method": "DELETE",
+        "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{member1Token}}", "type": "string" }] },
+        "url": "{{baseUrl}}/api/chat-rooms/{{adminRoomId}}/messages/{{message1Id}}"
+      }
+    },
+    {
+      "name": "PREP - ADMIN xóa MEMBER 2 khỏi phòng",
+      "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('Status 204', () => pm.response.to.have.status(204));"] } }],
+      "request": {
+        "method": "DELETE",
+        "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{adminToken}}", "type": "string" }] },
+        "url": "{{baseUrl}}/api/chat-rooms/{{adminRoomId}}/members/{{member2Id}}"
+      }
+    },
+    {
+      "name": "TC18 - Người bị xóa khỏi phòng tiếp tục xem tin nhắn - 403",
+      "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('Status 403', () => pm.response.to.have.status(403));"] } }],
+      "request": {
+        "method": "GET",
+        "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{member2Token}}", "type": "string" }] },
+        "url": "{{baseUrl}}/api/chat-rooms/{{adminRoomId}}/messages"
+      }
+    },
+    {
+      "name": "TC19 - Truy cập phòng không tồn tại - 404 Not Found",
+      "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('Status 404', () => pm.response.to.have.status(404));"] } }],
+      "request": {
+        "method": "GET",
+        "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{adminToken}}", "type": "string" }] },
+        "url": "{{baseUrl}}/api/chat-rooms/00000000-0000-0000-0000-000000000000/messages"
+      }
+    },
+    {
+      "name": "TC20 - Gọi API không có JWT - 401 Unauthorized",
+      "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('Status 401', () => pm.response.to.have.status(401));"] } }],
+      "request": {
+        "method": "GET",
+        "auth": { "type": "noauth" },
+        "url": "{{baseUrl}}/api/chat-rooms/{{adminRoomId}}/messages"
+      }
+    },
+    {
+      "name": "TC21A - ADMIN có quyền xóa phòng - 204 No Content",
+      "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('Status 204', () => pm.response.to.have.status(204));"] } }],
+      "request": {
+        "method": "DELETE",
+        "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{adminToken}}", "type": "string" }] },
+        "url": "{{baseUrl}}/api/chat-rooms/{{adminRoomId}}"
+      }
+    },
+    {
+      "name": "TC21B - MANAGER có quyền xóa phòng do mình tạo - 204 No Content",
+      "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('Status 204', () => pm.response.to.have.status(204));"] } }],
+      "request": {
+        "method": "DELETE",
+        "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{managerToken}}", "type": "string" }] },
+        "url": "{{baseUrl}}/api/chat-rooms/{{managerRoomId}}"
+      }
+    }
+  ]
+}

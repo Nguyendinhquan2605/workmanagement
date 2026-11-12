@@ -12,6 +12,7 @@ import com.bachhoa.workmanagement.entity.ChatRoom;
 import com.bachhoa.workmanagement.entity.ChatRoomMember;
 import com.bachhoa.workmanagement.entity.User;
 import com.bachhoa.workmanagement.entity.enums.UserStatus;
+import com.bachhoa.workmanagement.notification.NotificationService;
 import com.bachhoa.workmanagement.repository.ChatRoomMemberRepository;
 import com.bachhoa.workmanagement.repository.ChatRoomRepository;
 import com.bachhoa.workmanagement.repository.MessageRepository;
@@ -30,16 +31,19 @@ public class ChatRoomService {
     private final ChatRoomMemberRepository chatRoomMemberRepository;
     private final MessageRepository messageRepository;
     private final UserRepository userRepository;
+    private final NotificationService notificationService;
 
     public ChatRoomService(
             ChatRoomRepository chatRoomRepository,
             ChatRoomMemberRepository chatRoomMemberRepository,
             MessageRepository messageRepository,
-            UserRepository userRepository) {
+            UserRepository userRepository,
+            NotificationService notificationService) {
         this.chatRoomRepository = chatRoomRepository;
         this.chatRoomMemberRepository = chatRoomMemberRepository;
         this.messageRepository = messageRepository;
         this.userRepository = userRepository;
+        this.notificationService = notificationService;
     }
 
     @Transactional
@@ -103,6 +107,7 @@ public class ChatRoomService {
         ChatRoom room = findRoom(roomId);
         assertCanManageRoom(room, actor);
 
+        notificationService.deleteByRoom(roomId);
         messageRepository.deleteByRoom_Id(roomId);
         chatRoomMemberRepository.deleteByRoom_Id(roomId);
         chatRoomRepository.delete(room);
@@ -136,6 +141,7 @@ public class ChatRoomService {
 
         User user = findActiveUser(request.userId());
         ChatRoomMember membership = addMembership(room, user);
+        notificationService.notifyRoomMemberAdded(room, user);
         return toMemberResponse(membership);
     }
 

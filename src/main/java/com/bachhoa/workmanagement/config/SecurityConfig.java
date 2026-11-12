@@ -1,8 +1,12 @@
 package com.bachhoa.workmanagement.config;
 
+import com.bachhoa.workmanagement.common.exception.ApiErrorResponse;
 import com.bachhoa.workmanagement.security.CustomUserDetailsService;
 import com.bachhoa.workmanagement.security.JwtAuthenticationFilter;
+import tools.jackson.databind.json.JsonMapper;
 import jakarta.servlet.http.HttpServletResponse;
+import java.io.IOException;
+import java.time.LocalDateTime;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -27,6 +31,7 @@ public class SecurityConfig {
 
 	private final JwtAuthenticationFilter jwtAuthenticationFilter;
 	private final CustomUserDetailsService userDetailsService;
+	private final JsonMapper objectMapper;
 
 	@Bean
 	public PasswordEncoder passwordEncoder() {
@@ -63,11 +68,34 @@ public class SecurityConfig {
 						.anyRequest().authenticated())
 				.exceptionHandling(exception -> exception
 						.authenticationEntryPoint((request, response, authException) ->
-								response.sendError(HttpServletResponse.SC_UNAUTHORIZED, "Unauthorized"))
+							writeSecurityError(
+								response,
+								HttpServletResponse.SC_UNAUTHORIZED,
+								"Unauthorized"))
 						.accessDeniedHandler((request, response, accessDeniedException) ->
-								response.sendError(HttpServletResponse.SC_FORBIDDEN, "Forbidden")))
+							writeSecurityError(
+								response,
+								HttpServletResponse.SC_FORBIDDEN,
+								"Forbidden")))
 				.addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
 
 		return http.build();
+	}
+
+	private void writeSecurityError(
+			HttpServletResponse response,
+			int status,
+			String message) throws IOException {
+		response.setStatus(status);
+		response.setContentType("application/json;charset=UTF-8");
+		objectMapper.writeValue(
+				response.getWriter(),
+				new ApiErrorResponse(
+						LocalDateTime.now(),
+						status,
+						status == HttpServletResponse.SC_UNAUTHORIZED
+								? "Unauthorized" : "Forbidden",
+						message,
+						""));
 	}
 }
